@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                      Int       @id @default(autoincrement())
+  username                String    @unique
+  email                   String?   @unique
+  password                String?
+  googleId                String?   @unique
+  createdAt               DateTime  @default(now())
+  role                    String    // "ADMIN" or "TEACHER"
+  isEmailVerified         Boolean   @default(false)
+  emailVerificationCode   String?
+  emailVerificationExpires DateTime?
+  classes                 Class[]
+}
+
+model Class {
+  id        Int       @id @default(autoincrement())
+  name      String
+  teacherId Int?
+  teacher   User?     @relation(fields: [teacherId], references: [id])
+  exams     Exam[]
+  sessions  Session[]
+}
+
+model Session {
+  id        Int       @id @default(autoincrement())
+  name      String    // e.g., "24-25", "25-26"
+  classId   Int
+  class     Class     @relation(fields: [classId], references: [id], onDelete: Cascade)
+  exams     Exam[]
+  subjects  Subject[]
+  createdAt DateTime  @default(now())
+}
+
+model Subject {
+  id        Int      @id @default(autoincrement())
+  name      String   // e.g., "Mathematics", "Science", "English"
+  sessionId Int
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  exams     Exam[]
+  createdAt DateTime @default(now())
+}
+
+model Exam {
+  id             Int       @id @default(autoincrement())
+  title          String
+  classId        Int
+  class          Class     @relation(fields: [classId], references: [id], onDelete: Cascade)
+  type           String    @default("Monthly") // "Monthly", "Term", "Annual"
+  sessionId      Int?
+  session        Session?  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  subjectId      Int?
+  subject        Subject?  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  questions      Question[]
+  createdAt      DateTime  @default(now())
+  
+  // Exam Details
+  time           String?   @default("60 Minutes")
+  date           String?
+  maxMarks       String?   @default("30")
+  sectionAMarks  String?   @default("(2 Marks)")
+  sectionBMarks  String?   @default("(12 Marks)")
+  sectionCMarks  String?   @default("(10 Marks)")
+}
+
+
+model Question {
+  id       Int    @id @default(autoincrement())
+  text     String
+  type     String // "MCQ", "SHORT", "LONG"
+  options  String? // JSON string for MCQ options
+  examId   Int
+  exam     Exam   @relation(fields: [examId], references: [id], onDelete: Cascade)
+}
+
+model QuestionBank {
+  id        Int      @id @default(autoincrement())
+  text      String   @unique // Prevent duplicate questions
+  type      String   // "MCQ", "SHORT", "LONG"
+  options   String?  // JSON string
+  subject   String?
+  chapter   String?
+  topic     String?
+  unit      String?
+  className String?  // e.g., "IX", "X", "XI", "XII"
+  answer    String?  // Correct answer for MCQ, or model answer for others
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
